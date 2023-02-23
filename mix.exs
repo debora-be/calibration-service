@@ -5,7 +5,7 @@ defmodule ElixirInterviewStarter.MixProject do
     [
       app: :elixir_interview_starter,
       version: "0.1.0",
-      elixir: "~> 1.11",
+      elixir: "~> 1.14.3",
       start_permanent: Mix.env() == :prod,
       deps: deps()
     ]
