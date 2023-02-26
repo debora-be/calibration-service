@@ -7,16 +7,18 @@ defmodule ElixirInterviewStarter.CalibrationSession do
   use GenServer
 
   @type t() :: %__MODULE__{
-    user_email: String.t(),
-    user_has_ongoing_calibration_session: boolean,
-    precheck_1_succeeded: boolean,
-    user_has_ongoing_calibration_session_that_just_finished_precheck1: boolean,
-    precheck_2_succeeded: boolean,
-    calibration_succeeded: boolean
-  }
+          user_email: String.t(),
+          session_id: String.t(),
+          user_has_ongoing_calibration_session: boolean,
+          precheck_1_succeeded: boolean,
+          user_has_ongoing_calibration_session_that_just_finished_precheck1: boolean,
+          precheck_2_succeeded: boolean,
+          calibration_succeeded: boolean
+        }
 
   defstruct [
     :user_email,
+    :session_id,
     :user_has_ongoing_calibration_session,
     :precheck_1_succeeded,
     :user_has_ongoing_calibration_session_that_just_finished_precheck1,
