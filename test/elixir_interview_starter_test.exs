@@ -1,31 +1,50 @@
 defmodule ElixirInterviewStarterTest do
   use ExUnit.Case
-  doctest ElixirInterviewStarter
+  use ExMachina
 
-  test "it can go through the whole flow happy path" do
-  end
+  alias ElixirInterviewStarter
+  alias ElixirInterviewStarter.{CalibrationSession, Factory}
+  alias ElixirInterviewStarter.CalibrationSessions.CreateCurrentUserSession
 
-  test "start/1 creates a new calibration session and starts precheck 1" do
-  end
+  @user_email "test@example.com"
 
-  test "start/1 returns an error if the provided user already has an ongoing calibration session" do
-  end
+  describe "start/1" do
+    test "creates a new calibration session and starts precheck 1" do
+      assert {:ok, session_id} = ElixirInterviewStarter.start_link(CalibrationSession)
 
-  test "start_precheck_2/1 starts precheck 2" do
-  end
+      expected_response =
+        Factory.build(:calibration_session,
+          user_email: @user_email,
+          session_id: session_id,
+          user_has_ongoing_calibration_session: false,
+          precheck_1_succeeded: false
+        )
 
-  test "start_precheck_2/1 returns an error if the provided user does not have an ongoing calibration session" do
-  end
+      response =
+        CreateCurrentUserSession.process(%{
+          user_email: @user_email,
+          session_id: session_id,
+          user_has_ongoing_calibration_session: false,
+          precheck_1_succeeded: false
+        })
 
-  test "start_precheck_2/1 returns an error if the provided user's ongoing calibration session is not done with precheck 1" do
-  end
+      assert response == expected_response
+    end
 
-  test "start_precheck_2/1 returns an error if the provided user's ongoing calibration session is already done with precheck 2" do
-  end
+    test "returns an error if the CalibrationSession cannot be created" do
+      assert {:ok, session_id} = ElixirInterviewStarter.start_link(CalibrationSession)
 
-  test "get_current_session/1 returns the provided user's ongoing calibration session" do
-  end
+      expected_response = {:error, "The session for test@example.com was not created"}
 
-  test "get_current_session/1 returns nil if the provided user has no ongoing calibrationo session" do
+      response =
+        CreateCurrentUserSession.process(%{
+          user_email: @user_email,
+          session_id: session_id,
+          user_has_ongoing_calibration_session: true,
+          precheck_1_succeeded: false
+        })
+
+      assert expected_response = response
+    end
   end
 end
