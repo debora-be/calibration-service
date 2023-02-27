@@ -8,15 +8,17 @@ defmodule ElixirInterviewStarter.CalibrationSessions.CreateCurrentUserSession do
   @doc """
   Saves the given data in the struct.
   """
-  def process(user_email, session_id) do
+  def process(%{
+        user_email: user_email,
+        session_id: session_id,
+        user_has_ongoing_calibration_session: user_has_ongoing_calibration_session,
+        precheck_1_succeeded: precheck_1_succeeded
+      }) do
     %CalibrationSession{
       user_email: user_email,
       session_id: session_id,
-      user_has_ongoing_calibration_session: false,
-      precheck_1_succeeded: true,
-      user_has_ongoing_calibration_session_that_just_finished_precheck1: true,
-      precheck_2_succeeded: true,
-      calibration_succeeded: true
+      user_has_ongoing_calibration_session: user_has_ongoing_calibration_session,
+      precheck_1_succeeded: precheck_1_succeeded
     }
   end
 end
