@@ -9,7 +9,6 @@ jobs:
   build:
 
     name: Build and test
-    runs-on: ubuntu22
 
     steps:
     - uses: actions/checkout@v3
