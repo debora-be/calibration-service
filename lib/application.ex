@@ -11,8 +11,7 @@ defmodule ElixirInterviewStarter.Application do
       # Starts a worker by calling: ElixirInterviewStarter.Worker.start_link(arg)
       # {ElixirInterviewStarter.Worker, arg}
       # Starts the calibration service automatically.
-      ElixirInterviewStarter.CalibrationRunner,
-      ElixirInterviewStarter
+      {ElixirInterviewStarter, []}
     ]
 
     # See https://hexdocs.pm/elixir/Supervisor.html
