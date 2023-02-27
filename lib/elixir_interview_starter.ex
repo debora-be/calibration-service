@@ -45,7 +45,6 @@ defmodule ElixirInterviewStarter do
     with {:ok, session_id} <- start_link(CalibrationSession),
          false <- user_has_ongoing_calibration_session?(user_email),
          %{"precheck1" => true} <- start_precheck_1(user_email) do
-
       initial_calibration_session =
         CreateCurrentUserSession.process(%{
           user_email: user_email,
@@ -133,7 +132,9 @@ defmodule ElixirInterviewStarter do
 
           send(self(), {:update_struct, checked_calibration_session})
 
-          {:ok, checked_calibration_session}
+          {:ok, complete_calibration_session} =  start_calibration(user_email)
+
+          {:ok, complete_calibration_session}
         else
           {:error,
            "Please verify if the cartridge is inserted and the device is submerged in water and restart the process"}
@@ -168,7 +169,7 @@ defmodule ElixirInterviewStarter do
 
       send(self(), {:update_struct, complete_calibration_session})
 
-      {:ok, "The calibration session for #{user_email} was completed successfully"}
+      {:ok, complete_calibration_session}
     else
       %{"calibrated" => false}
     end
