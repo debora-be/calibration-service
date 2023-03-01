@@ -1,4 +1,4 @@
-defmodule ElixirInterviewStarterTest do
+defmodule ElixirInterviewStarter.Operational.CalibrationSessionManagerTest do
   use ExMachina
   use ExUnit.Case
 

@@ -31,7 +31,8 @@ defmodule ElixirInterviewStarter.MixProject do
     [
       {:credo, "~> 1.6", only: [:dev, :test], runtime: false},
       {:excoveralls, "~> 0.10", only: :test},
-      {:ex_machina, "~> 2.7.0"}
+      {:ex_machina, "~> 2.7.0"},
+      {:mox, "~> 1.0", only: :test}
     ]
   end
 
