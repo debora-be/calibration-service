@@ -2,6 +2,11 @@ defmodule ElixirInterviewStarter.Operational.CalibrationSessionManager do
   @moduledoc """
   See `README.md` for instructions on how to approach this technical challenge.
   """
+
+  @behaviour ElixirInterviewStarterBehaviour
+
+  @type user_email :: String.t()
+
   alias ElixirInterviewStarter.CalibrationSession
 
   alias ElixirInterviewStarter.CalibrationSessions.{
@@ -13,7 +18,6 @@ defmodule ElixirInterviewStarter.Operational.CalibrationSessionManager do
 
   alias ElixirInterviewStarter.Operational.GenServer
 
-  # @callback start(user_email :: String.t()) :: {:ok, CalibrationSession.t()} | {:error, String.t()}
   @doc """
   Creates a new `CalibrationSession` for the provided user, starts a `GenServer` process
   for the session, and starts precheck 1.
@@ -24,6 +28,7 @@ defmodule ElixirInterviewStarter.Operational.CalibrationSessionManager do
   """
   def start(user_email) do
     elixir_interview_starter_impl()
+
     with {:ok, session_id} <- GenServer.start_link(),
          false <- user_has_ongoing_calibration_session?(user_email),
          %{"precheck1" => true} <- start_precheck_1(user_email) do
@@ -83,8 +88,6 @@ defmodule ElixirInterviewStarter.Operational.CalibrationSessionManager do
     end
   end
 
-  @callback start_precheck_2(user_email :: String.t()) ::
-              {:ok, map()} | {:error, String.t()}
   @doc """
   Starts the precheck 2 step of the ongoing `CalibrationSession` for the provided user.
 

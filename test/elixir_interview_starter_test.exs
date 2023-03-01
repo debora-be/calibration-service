@@ -1,50 +1,40 @@
-# defmodule ElixirInterviewStarterTest do
-#   use ExUnit.Case
-#   use ExMachina
+defmodule ElixirInterviewStarterTest do
+  use ExMachina
+  use ExUnit.Case
 
-#   alias ElixirInterviewStarter
-#   alias ElixirInterviewStarter.{CalibrationSession, Factory}
-#   alias ElixirInterviewStarter.CalibrationSessions.CreateCurrentUserSession
+  import Mox
 
-#   @user_email "test@example.com"
+  alias ElixirInterviewStarter.Operational.GenServer
+  alias ElixirInterviewStarter
+  alias ElixirInterviewStarter.Factory
 
-#   describe "start/1" do
-#     test "creates a new calibration session and starts precheck 1" do
-#       assert {:ok, session_id} = ElixirInterviewStarter.start_link(CalibrationSession)
+  @user_email "test@example.com"
 
-#       expected_response =
-#         Factory.build(:calibration_session,
-#           user_email: @user_email,
-#           session_id: session_id,
-#           user_has_ongoing_calibration_session: false,
-#           precheck_1_succeeded: false
-#         )
+  describe "start/1" do
+    test "creates a new calibration session and starts precheck_1" do
+      expect(ElixirInterviewStarter, :start, fn user_email ->
+        user_email == @user_email
 
-#       response =
-#         CreateCurrentUserSession.process(%{
-#           user_email: @user_email,
-#           session_id: session_id,
-#           user_has_ongoing_calibration_session: false,
-#           precheck_1_succeeded: false
-#         })
+        calibration_session =
+          {:ok,
+           Factory.build(:calibration_session,
+             user_email: @user_email,
+             session_id: self()
+           )}
+      end)
 
-#       assert response == expected_response
-#     end
+      assert {:ok, calibration_session} = ElixirInterviewStarter.start(@user_email)
+    end
 
-#     test "returns an error if the CalibrationSession cannot be created" do
-#       assert {:ok, session_id} = ElixirInterviewStarter.start_link()
+    test "returns an error if there's already a session going on for the current user" do
+      expect(ElixirInterviewStarter, :start, fn user_email ->
+        user_email == @user_email
 
-#       expected_response = {:error, "The session for test@example.com was not created"}
+        {:error,
+         "The session for email was not created - another session has already been started for this user"}
+      end)
 
-#       response =
-#         CreateCurrentUserSession.process(%{
-#           user_email: @user_email,
-#           session_id: session_id,
-#           user_has_ongoing_calibration_session: true,
-#           precheck_1_succeeded: false
-#         })
-
-#       assert expected_response = response
-#     end
-#   end
-# end
+      assert {:error, _} = ElixirInterviewStarter.start(@user_email)
+    end
+  end
+end

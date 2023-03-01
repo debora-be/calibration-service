@@ -1,7 +1,9 @@
 defmodule ElixirInterviewStarter do
-  alias ElixirInterviewStarter.Operational.CalibrationSessionManager, as: Manager
-
   @behaviour ElixirInterviewStarterBehaviour
+
+  @type user_email :: String.t()
+
+  alias ElixirInterviewStarter.Operational.CalibrationSessionManager, as: Manager
 
   @impl ElixirInterviewStarterBehaviour
   defdelegate start(user_email),
