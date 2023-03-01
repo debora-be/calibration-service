@@ -1,4 +1,8 @@
 defmodule ElixirInterviewStarter do
+  @moduledoc """
+  This is the main module of the ElixirInterviewStarter application.
+  """
+
   @behaviour ElixirInterviewStarterBehaviour
 
   @type user_email :: String.t()

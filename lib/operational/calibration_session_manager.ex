@@ -29,13 +29,12 @@ defmodule ElixirInterviewStarter.Operational.CalibrationSessionManager do
   def start(user_email) do
     elixir_interview_starter_impl()
 
-    with {:ok, session_id} <- GenServer.start_link(),
-         false <- user_has_ongoing_calibration_session?(user_email),
+    with false <- user_has_ongoing_calibration_session?(user_email),
          %{"precheck1" => true} <- start_precheck_1(user_email) do
       initial_calibration_session =
         CreateCurrentUserSession.process(%{
           user_email: user_email,
-          session_id: session_id,
+          session_id: self(),
           user_has_ongoing_calibration_session: false,
           precheck_1_succeeded: false
         })
