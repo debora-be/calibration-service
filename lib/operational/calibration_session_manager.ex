@@ -1,9 +1,7 @@
-defmodule ElixirInterviewStarter.CalibrationSessions.CalibrationSessionManager do
+defmodule ElixirInterviewStarter.Operational.CalibrationSessionManager do
   @moduledoc """
   See `README.md` for instructions on how to approach this technical challenge.
   """
-  use GenServer
-
   alias ElixirInterviewStarter.CalibrationSession
 
   alias ElixirInterviewStarter.CalibrationSessions.{
@@ -13,26 +11,9 @@ defmodule ElixirInterviewStarter.CalibrationSessions.CalibrationSessionManager d
 
   alias ElixirInterviewStarter.DeviceMessages
 
-  @doc """
-  Starts the API client which creates the `GenServer` process for the `CalibrationSession`
-  """
-  def start_link(_) do
-    GenServer.start_link(__MODULE__, %CalibrationSession{})
-  end
+  alias ElixirInterviewStarter.Operational.GenServer
 
-  @impl true
-  def init(state) do
-    {:ok, state}
-  end
-
-  @impl true
-  def handle_call({:update_struct, attrs}, _from, state) do
-    new_state = Map.merge(state, attrs)
-
-    {:reply, new_state, new_state}
-  end
-
-  @spec start(user_email :: String.t()) :: {:ok, CalibrationSession.t()} | {:error, String.t()}
+  # @callback start(user_email :: String.t()) :: {:ok, CalibrationSession.t()} | {:error, String.t()}
   @doc """
   Creates a new `CalibrationSession` for the provided user, starts a `GenServer` process
   for the session, and starts precheck 1.
@@ -42,7 +23,8 @@ defmodule ElixirInterviewStarter.CalibrationSessions.CalibrationSessionManager d
   When precheck_1 is ready, the `GenServer` process will receive a message and update the data from `CalibrationSession`.
   """
   def start(user_email) do
-    with {:ok, session_id} <- start_link(CalibrationSession),
+    elixir_interview_starter_impl()
+    with {:ok, session_id} <- GenServer.start_link(),
          false <- user_has_ongoing_calibration_session?(user_email),
          %{"precheck1" => true} <- start_precheck_1(user_email) do
       initial_calibration_session =
@@ -101,8 +83,8 @@ defmodule ElixirInterviewStarter.CalibrationSessions.CalibrationSessionManager d
     end
   end
 
-  @spec start_precheck_2(user_email :: String.t()) ::
-          {:ok, map()} | {:error, String.t()}
+  @callback start_precheck_2(user_email :: String.t()) ::
+              {:ok, map()} | {:error, String.t()}
   @doc """
   Starts the precheck 2 step of the ongoing `CalibrationSession` for the provided user.
 
@@ -132,7 +114,7 @@ defmodule ElixirInterviewStarter.CalibrationSessions.CalibrationSessionManager d
 
           send(self(), {:update_struct, checked_calibration_session})
 
-          {:ok, complete_calibration_session} =  start_calibration(user_email)
+          {:ok, complete_calibration_session} = start_calibration(user_email)
 
           {:ok, complete_calibration_session}
         else
@@ -186,13 +168,6 @@ defmodule ElixirInterviewStarter.CalibrationSessions.CalibrationSessionManager d
   end
 
   @doc """
-  Fills the %CalibrationSession{} with the initial data from precheck_1.
-  """
-  def update_struct(attrs) do
-    GenServer.call(self(), {:update_struct, attrs})
-  end
-
-  @doc """
   Returns `true` if the user has an ongoing `CalibrationSession`, `false` otherwise.
   """
   def user_has_ongoing_calibration_session?(user_email) do
@@ -204,5 +179,12 @@ defmodule ElixirInterviewStarter.CalibrationSessions.CalibrationSessionManager d
   """
   def user_has_ongoing_calibration_session_that_just_finished_precheck1? do
     self() in Process.list()
+  end
+
+  defp elixir_interview_starter_impl() do
+    Application.get_env(
+      :elixir_interview_starter,
+      ElixirInterviewStarter
+    )
   end
 end
