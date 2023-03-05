@@ -12,12 +12,14 @@ defmodule ElixirInterviewStarter.CalibrationSessions.CreateCurrentUserSession do
         user_email: user_email,
         session_id: session_id,
         user_has_ongoing_calibration_session: user_has_ongoing_calibration_session,
+        precheck_1_message: precheck_1_message,
         precheck_1_succeeded: precheck_1_succeeded
       }) do
     %CalibrationSession{
       user_email: user_email,
       session_id: session_id,
       user_has_ongoing_calibration_session: user_has_ongoing_calibration_session,
+      precheck_1_message: precheck_1_message,
       precheck_1_succeeded: precheck_1_succeeded
     }
   end
