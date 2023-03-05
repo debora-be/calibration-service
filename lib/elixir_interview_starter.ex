@@ -20,7 +20,7 @@ defmodule ElixirInterviewStarter do
     as: :start_precheck_2
 
   @impl ElixirInterviewStarterBehaviour
-  defdelegate get_current_session(),
+  defdelegate get_current_session(user_email),
     to: Manager,
     as: :get_current_session
 end
