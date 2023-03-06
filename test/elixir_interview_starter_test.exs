@@ -4,7 +4,7 @@ defmodule ElixirInterviewStarterTest do
 
   import Mox
 
-  alias ElixirInterviewStarter.Operational.GenServer
+  alias ElixirInterviewStarter.Operational.Server
   alias ElixirInterviewStarter
   alias ElixirInterviewStarter.Factory
 
