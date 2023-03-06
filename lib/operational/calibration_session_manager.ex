@@ -4,10 +4,8 @@ defmodule ElixirInterviewStarter.Operational.CalibrationSessionManager do
   """
 
   alias ElixirInterviewStarter.CalibrationSession
-  alias ElixirInterviewStarter.CalibrationSessions.UpdateCurrentUserSession
-
+  alias ElixirInterviewStarter.CalibrationSessions.UpdateCurrentUserSession, as: UpdateSession
   alias ElixirInterviewStarter.DeviceMessages
-
   alias ElixirInterviewStarter.Operational.{Calibrate, Server, StartPrecheck1}
 
   @behaviour ElixirInterviewStarterBehaviour
@@ -16,7 +14,7 @@ defmodule ElixirInterviewStarter.Operational.CalibrationSessionManager do
 
   @precheck_2_message "startPrecheck2"
 
-  @spec start(user_email) :: {:ok, %CalibrationSession{}} | {:error, String.t()}
+  @spec start(user_email) :: {:ok, struct()} | {:error, String.t()}
   @doc """
   Creates a new `CalibrationSession` for the provided user, starts a `GenServer` process
   for the session, and starts precheck 1.
@@ -28,12 +26,11 @@ defmodule ElixirInterviewStarter.Operational.CalibrationSessionManager do
   def start(user_email) do
     elixir_interview_starter_impl()
 
-    with {:ok, initial_calibration_session} <- StartPrecheck1.process(user_email) do
-      Server.precheck(initial_calibration_session)
+    case StartPrecheck1.process(user_email) do
+      {:ok, "Precheck_1 realized"} ->
+        get_current_session(user_email)
 
-      {:ok, initial_calibration_session}
-    else
-      _ ->
+      {:error, _} ->
         {:error,
          "The session for #{user_email} was not created - another session has already been started for this user"}
     end
@@ -55,25 +52,26 @@ defmodule ElixirInterviewStarter.Operational.CalibrationSessionManager do
          precheck_1_succeeded: true,
          precheck_2_succeeded: nil
        }} ->
+        calibration_session = %{
+          user_email: user_email,
+          session_id: pid,
+          user_has_ongoing_calibration_session: true,
+          precheck_1_message: "startPrecheck1",
+          precheck_1_succeeded: true,
+          user_has_ongoing_calibration_session_that_just_finished_precheck1: true,
+          precheck_2_message: @precheck_2_message,
+          precheck_2_succeeded: true,
+          user_has_ongoing_calibration_session_that_just_finished_precheck_2: nil,
+          calibration_message: nil,
+          calibration_succeeded: nil
+        }
+
         DeviceMessages.send(user_email, @precheck_2_message)
 
-        prechecked_calibration_session =
-          UpdateCurrentUserSession.process(%{
-            user_email: user_email,
-            session_id: pid,
-            user_has_ongoing_calibration_session: true,
-            precheck_1_message: "startPrecheck1",
-            precheck_1_succeeded: true,
-            user_has_ongoing_calibration_session_that_just_finished_precheck1: true,
-            precheck_2_message: @precheck_2_message,
-            precheck_2_succeeded: true,
-            calibration_message: nil,
-            calibration_succeeded: nil
-          })
-
-        Server.precheck(prechecked_calibration_session)
-
-        {:ok, _calibrated} = Calibrate.process(prechecked_calibration_session)
+        calibration_session
+        |> UpdateSession.process()
+        |> Server.precheck()
+        |> Calibrate.process()
 
       nil ->
         {:error,
@@ -81,11 +79,11 @@ defmodule ElixirInterviewStarter.Operational.CalibrationSessionManager do
 
       _ ->
         {:error,
-         "The user #{user_email} has an ongoing calibration session, but it is not ready for starting the Calibration, please restart the process"}
+         "The user #{user_email} has an ongoing calibration session, but it is not ready for starting the Calibration, please restart the Device"}
     end
   end
 
-  @spec get_current_session(user_email) :: {:ok, %CalibrationSession{}} | nil
+  @spec get_current_session(user_email) :: {:ok, struct()} | nil
   @doc """
   Retrieves the ongoing `CalibrationSession` for the provided user_email, if they have one.
   """
@@ -101,6 +99,7 @@ defmodule ElixirInterviewStarter.Operational.CalibrationSessionManager do
     end
   end
 
+  @spec user_has_ongoing_calibration_session?(user_email) :: boolean()
   @doc """
   Returns `true` if the user has an ongoing `CalibrationSession`, `false` otherwise.
   """

@@ -60,31 +60,4 @@ defmodule ElixirInterviewStarter.Operational.Server do
 
     {:reply, new_state, new_state}
   end
-
-  # @impl true
-  # def handle_call({:precheck, calibration_map}, _from, state) do
-  #   new_state = Map.merge(state, calibration_map)
-
-  #   {:reply, new_state, new_state, 30_000}
-  # end
-
-  # @impl true
-  # def handle_info(:precheck, state) do
-  #   Stream.run(state)
-
-  #   {:noreply, state}
-  # end
-
-  # def handle_call({:work, attrs}, _from, state) do
-  #   IO.puts "Processing attrs #{item}..."
-  #   :timer.sleep(3000)
-  #   {:reply, "Done processing item #{item}!", []}
-  # end
-
-  #   @impl true
-  #   def handle_cast({:precheck, attrs}, state) do
-  #     new_state = Map.merge(state, attrs)
-
-  #     {:noreply, new_state}
-  #   end
 end
