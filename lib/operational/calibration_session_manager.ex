@@ -1,23 +1,20 @@
 defmodule ElixirInterviewStarter.Operational.CalibrationSessionManager do
   @moduledoc """
-  See `README.md` for instructions on how to approach this technical challenge.
+  This module is responsible for managing the state of the `CalibrationSession` for a given user.
   """
+
+  alias ElixirInterviewStarter.CalibrationSession
+  alias ElixirInterviewStarter.CalibrationSessions.UpdateCurrentUserSession, as: UpdateSession
+  alias ElixirInterviewStarter.DeviceMessages
+  alias ElixirInterviewStarter.Operational.{Calibrate, Server, StartPrecheck1}
 
   @behaviour ElixirInterviewStarterBehaviour
 
   @type user_email :: String.t()
 
-  alias ElixirInterviewStarter.CalibrationSession
+  @precheck_2_message "startPrecheck2"
 
-  alias ElixirInterviewStarter.CalibrationSessions.{
-    CreateCurrentUserSession,
-    UpdateCurrentUserSession
-  }
-
-  alias ElixirInterviewStarter.DeviceMessages
-
-  alias ElixirInterviewStarter.Operational.GenServer
-
+  @spec start(user_email) :: {:ok, struct()} | {:error, String.t()}
   @doc """
   Creates a new `CalibrationSession` for the provided user, starts a `GenServer` process
   for the session, and starts precheck 1.
@@ -29,64 +26,17 @@ defmodule ElixirInterviewStarter.Operational.CalibrationSessionManager do
   def start(user_email) do
     elixir_interview_starter_impl()
 
-    with false <- user_has_ongoing_calibration_session?(user_email),
-         %{"precheck1" => true} <- start_precheck_1(user_email) do
-      initial_calibration_session =
-        CreateCurrentUserSession.process(%{
-          user_email: user_email,
-          session_id: self(),
-          user_has_ongoing_calibration_session: false,
-          precheck_1_succeeded: false
-        })
+    case StartPrecheck1.process(user_email) do
+      {:ok, "Precheck_1 realized"} ->
+        get_current_session(user_email)
 
-      send(self(), {:update_struct, initial_calibration_session})
-
-      updated_calibration_session =
-        receive_message_from_initial_calibration_session(initial_calibration_session)
-
-      {:ok, updated_calibration_session}
-    else
-      _ ->
+      {:error, _} ->
         {:error,
          "The session for #{user_email} was not created - another session has already been started for this user"}
     end
   end
 
-  @spec receive_message_from_initial_calibration_session(initial_calibration_session :: Map.t()) ::
-          Map.t()
-  @doc """
-  Send and receive the message from the `GenServer` process; if is everything ok,
-  updates the struct with the final data from precheck_1.
-  """
-  def receive_message_from_initial_calibration_session(session) do
-    case send(self(), {:update_struct, session}) do
-      {:update_struct, session} ->
-        Map.merge(session, %{
-          user_has_ongoing_calibration_session: true,
-          precheck_1_succeeded: true
-        })
-
-      _ ->
-        {:error, "There is no message for this device"}
-    end
-  end
-
-  @spec start_precheck_1(user_email :: String.t()) :: Map.t() | Map.t()
-  @doc """
-  Starts the precheck 1 step of the ongoing `CalibrationSession` for the provided user.
-  If the user has already an ongoing `CalibrationSession`, the `CalibrationSession` cannot continue.
-  """
-  def start_precheck_1(user_email) do
-    send(self(), {:update_struct, "startPrecheck1"})
-    {processing_time, _} = :timer.tc(fn -> DeviceMessages.send(user_email, "startPrecheck1") end)
-
-    if processing_time < 30_000 do
-      %{"precheck1" => true}
-    else
-      %{"precheck1" => false}
-    end
-  end
-
+  # @spec start_precheck_2(user_email) :: {:ok, %CalibrationSession{}} | {:error, String.t()}
   @doc """
   Starts the precheck 2 step of the ongoing `CalibrationSession` for the provided user.
 
@@ -95,92 +45,72 @@ defmodule ElixirInterviewStarter.Operational.CalibrationSessionManager do
   an error.
   """
   def start_precheck_2(user_email) do
-    case user_has_ongoing_calibration_session_that_just_finished_precheck1?() do
-      true ->
-        send(self(), {:update_struct, "startPrecheck2"})
-
-        {processing_time, _} =
-          :timer.tc(fn -> DeviceMessages.send(user_email, "startPrecheck2") end)
-
-        if processing_time < 30_000 do
-          checked_calibration_session =
-            UpdateCurrentUserSession.process(%{
-              user_email: user_email,
-              session_id: self(),
-              user_has_ongoing_calibration_session: true,
-              precheck_1_succeeded: true,
-              user_has_ongoing_calibration_session_that_just_finished_precheck1: true,
-              precheck_2_succeeded: true,
-              calibration_succeeded: false
-            })
-
-          send(self(), {:update_struct, checked_calibration_session})
-
-          {:ok, complete_calibration_session} = start_calibration(user_email)
-
-          {:ok, complete_calibration_session}
-        else
-          {:error,
-           "Please verify if the cartridge is inserted and the device is submerged in water and restart the process"}
-        end
-
-      false ->
-        {:error,
-         "The user #{user_email} has no ongoing calibration session, please restart the process"}
-    end
-  end
-
-  @spec start_calibration(user_email :: String.t()) :: map()
-  @doc """
-  After all the prechecks are done, the calibration session is started.
-  """
-  def start_calibration(user_email) do
-    {processing_time, _} = :timer.tc(fn -> DeviceMessages.send(user_email, "calibrate") end)
-
-    if processing_time < 100_000 do
-      send(self(), {:update_struct, %{"calibrated" => true}})
-
-      complete_calibration_session =
-        UpdateCurrentUserSession.process(%{
+    case get_current_session(user_email) do
+      {:ok,
+       %CalibrationSession{
+         session_id: pid,
+         precheck_1_succeeded: true,
+         precheck_2_succeeded: nil
+       }} ->
+        calibration_session = %{
           user_email: user_email,
-          session_id: self(),
+          session_id: pid,
           user_has_ongoing_calibration_session: true,
+          precheck_1_message: "startPrecheck1",
           precheck_1_succeeded: true,
           user_has_ongoing_calibration_session_that_just_finished_precheck1: true,
+          precheck_2_message: @precheck_2_message,
           precheck_2_succeeded: true,
-          calibration_succeeded: true
-        })
+          user_has_ongoing_calibration_session_that_just_finished_precheck_2: nil,
+          calibration_message: nil,
+          calibration_succeeded: nil
+        }
 
-      send(self(), {:update_struct, complete_calibration_session})
+        DeviceMessages.send(user_email, @precheck_2_message)
 
-      {:ok, complete_calibration_session}
-    else
-      %{"calibrated" => false}
+        calibration_session
+        |> UpdateSession.process()
+        |> Server.precheck()
+        |> Calibrate.process()
+
+      nil ->
+        {:error,
+         "The user #{user_email} has no ongoing calibration session, please restart the process"}
+
+      _ ->
+        {:error,
+         "The user #{user_email} has an ongoing calibration session, but it is not ready for starting the Calibration, please restart the Device"}
     end
   end
 
+  @spec get_current_session(user_email) :: {:ok, struct()} | nil
   @doc """
-  Retrieves the ongoing `CalibrationSession` for the provided user, if they have one.
+  Retrieves the ongoing `CalibrationSession` for the provided user_email, if they have one.
   """
-  def get_current_session do
-    session = Process.get()
-    calibration_session = Enum.fetch(session, 1)
+  def get_current_session(user_email) do
+    case Server.get() do
+      current_session = %CalibrationSession{
+        user_email: ^user_email
+      } ->
+        {:ok, current_session}
 
-    {:ok, calibration_session}
+      _ ->
+        nil
+    end
   end
 
+  @spec user_has_ongoing_calibration_session?(user_email) :: boolean()
   @doc """
   Returns `true` if the user has an ongoing `CalibrationSession`, `false` otherwise.
   """
   def user_has_ongoing_calibration_session?(user_email) do
-    user_email in Process.list()
-  end
+    case get_current_session(user_email) do
+      {:ok, %CalibrationSession{precheck_1_succeeded: true}} ->
+        true
 
-  @doc """
-  Returns `true` if the user has an ongoing `CalibrationSession` that just finished precheck 1, `false` otherwise.
-  """
-  def user_has_ongoing_calibration_session_that_just_finished_precheck1? do
-    self() in Process.list()
+      _ ->
+        false
+    end
   end
 
   defp elixir_interview_starter_impl() do

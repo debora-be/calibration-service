@@ -21,6 +21,7 @@ defmodule ElixirInterviewStarter.CalibrationSessions.CreateCurrentUserSessionTes
           user_email: user_email,
           session_id: session_id,
           user_has_ongoing_calibration_session: nil,
+          precheck_1_message: nil,
           precheck_1_succeeded: nil
         })
 
