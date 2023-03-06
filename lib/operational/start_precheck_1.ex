@@ -19,7 +19,7 @@ defmodule ElixirInterviewStarter.Operational.StartPrecheck1 do
   If the user has already an ongoing `CalibrationSession`, the `CalibrationSession` cannot continue.
   """
   def process(user_email) do
-    with {:ok, pid} = Server.start_link(%CalibrationSession{}),
+    with {:ok, pid} <- Server.start_link(%CalibrationSession{}),
          false <- CalibrationSessionManager.user_has_ongoing_calibration_session?(user_email) do
       initial_data = %{
         user_email: user_email,
